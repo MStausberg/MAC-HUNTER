@@ -8,10 +8,15 @@ platform is set to 'cisco_xe' - even if the device is regular IOS.
 
 """
 
+# Imports
 import os
-from nornir import InitNornir
-from nornir_netmiko.tasks import netmiko_send_command
 from rich import print as rprint
+from nornir import InitNornir
+from nornir.core.plugins.connections import ConnectionPluginRegister
+from nornir_netmiko.tasks import netmiko_send_command
+
+# Register Plugins
+ConnectionPluginRegister.register("connection-name", netmiko_send_command)
 
 nr = InitNornir(config_file="config.yaml")
 break_list = []
