@@ -1,17 +1,14 @@
 ---
 
-
-S1:
-    hostname: 192.168.31.101
+R1:
+    hostname: 10.100.0.10
     groups:
-        - cisco_group
-
-S2:
-    hostname: 192.168.31.102
+        - lab
+R2:
+    hostname: 10.100.0.11
     groups:
-        - cisco_group
-
-S3:
-    hostname: 192.168.31.103
+        - lab
+R3:
+    hostname: 10.100.0.12
     groups:
-        - cisco_group
+        - lab

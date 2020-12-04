@@ -7,3 +7,8 @@ cisco_group:
   connection_options:
     netmiko:
       extras:  {}
+
+lab:
+    username: manu
+    password: cisco
+    platform: 'ios'
