@@ -1,14 +1,6 @@
 ---
 
-cisco_group:
-  username: john
-  password: cisco
-  platform: 'cisco_xe'
-  connection_options:
-    netmiko:
-      extras:  {}
-
 lab:
-    username: manu
-    password: cisco
-    platform: 'ios'
+  username: manu
+  password: cisco
+  platform: cisco_xe
