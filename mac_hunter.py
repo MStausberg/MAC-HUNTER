@@ -6,46 +6,39 @@ This script is intended to work on Cisco IOS and IOS-XE devices.
 Due to an issue with the Genie parsers ensure your Nornir inventory
 platform is set to 'cisco_xe' - even if the device is regular IOS.
 
+
+19 Dec 2020 Ported to nornir 3 by paketb0te
+
 """
 
 # Imports
-import os
 from rich import print as rprint
 from nornir import InitNornir
+from nornir.core.task import Task
 from nornir.core.plugins.connections import ConnectionPluginRegister
 from nornir_netmiko.tasks import netmiko_send_command
+from netaddr import EUI
 
 # Register Plugins
 ConnectionPluginRegister.register("connection-name", netmiko_send_command)
 
-nr = InitNornir(config_file="config.yaml")
-break_list = []
 
-CLEAR = "clear"
-os.system(CLEAR)
-target = input("Enter the mac address you wish to find: ")
-
-
-def pull_info(task):
-
+def get_interface_info(task: Task, target: EUI) -> None:
     """
-    If MAC address is present, identify Device and Interface
+    Get MAC addresses of all interfaces and compare to target.
+    If present, identify Device and Interface
     """
-
-    result = task.run(
+    interfaces = task.run(
         task=netmiko_send_command, command_string="show interfaces", use_genie=True
-    )
-    task.host["facts"] = result.result
-    interfaces = task.host["facts"]
-    for interface in interfaces:
-        mac_addr = interfaces[interface]["mac_address"]
+    ).result
+
+    for intf in interfaces:
+        mac_addr = EUI(interfaces[intf]["mac_address"])
         if target == mac_addr:
-            break_list.append(target)
-            intf = interface
-            print_info(task, intf)
+            print_info(task, intf, target)
 
 
-def print_info(task, intf):
+def print_info(task: Task, intf: str, target: EUI) -> None:
 
     """
     Execute show cdp neighbor and show version commands
@@ -60,30 +53,39 @@ def print_info(task, intf):
     )
     task.host["cdpinfo"] = cdp_result.result
     index = task.host["cdpinfo"]["cdp"]["index"]
+    intf_neighbors = {}
     for num in index:
-        local_intf = index[num]["local_interface"]
-        if local_intf == intf:
+        if intf == index[num]["local_interface"]:
             dev_id = index[num]["device_id"]
             port_id = index[num]["port_id"]
+            intf_neighbors[dev_id] = port_id
     ver_result = task.run(
         task=netmiko_send_command, command_string="show version", use_genie=True
     )
     task.host["verinfo"] = ver_result.result
     version = task.host["verinfo"]["version"]
     serial_num = version["chassis_sn"]
-    oper_sys = version["os"]
     uptime = version["uptime"]
-    version_short = version["version_short"]
+    version_long = version["os"] + " " + version["version"]
     print(f"DEVICE MGMT IP: {task.host.hostname}")
     print(f"DEVICE SERIAL NUMBER: {serial_num}")
-    print(f"DEVICE OPERATING SYSTEM: {oper_sys}")
-    print(f"DEVICE UPTIME: {uptime}")
-    print(f"DEVICE VERSION: {version_short}\n")
-    if dev_id:
+    print(f"DEVICE OS: {version_long}")
+    print(f"DEVICE UPTIME: {uptime}\n")
+    if intf_neighbors:
         rprint("[cyan]REMOTE CONNECTION DETAILS...[/cyan]")
-        print(f"Connected to {port_id} on {dev_id}\n")
+        for neighbor in intf_neighbors:
+            print(f"Connected to {neighbor}'s {intf_neighbors[neighbor]}")
+        print()
 
 
-results = nr.run(task=pull_info)
-if target not in break_list:
-    rprint("[red]TARGET NOT FOUND[/red]")
+def main():
+    """
+    Main Function, execution starts here.
+    """
+    nornir = InitNornir(config_file="config.yaml")
+    target = EUI(input("Enter the MAC address you wish to find: "))
+    nornir.run(task=get_interface_info, target=target)
+
+
+if __name__ == "__main__":
+    main()
